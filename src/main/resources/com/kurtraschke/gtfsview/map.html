@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Map</title>
+        <style type="text/css">
+            body {
+                padding: 0;
+                margin: 0;
+            }
+            body, html, #map {
+                height: 100%;
+                width: 100%;
+            }
+        </style>
+        <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" />
+    </head>
+    <body>
+        <div id="map"></div>
+
+
+        <script type="text/javascript" src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
+        <script type="text/javascript" src="http://maps.stamen.com/js/tile.stamen.js?v1.2.4"></script>
+        <script type="text/javascript" src="assets/js/bouncemarker.js"></script>
+        <!--<script type='text/javascript' src='http://getfirebug.com/releases/lite/1.2/firebug-lite-compressed.js'></script>-->
+
+        <script type="text/javascript">
+            var layer = new L.StamenTileLayer("toner");
+            var map = L.map("map").setView([38.9896, -77.0273], 13).addLayer(layer);
+
+            var stops = {};
+            var stopsLayerGroup;
+
+            var shapePointsLayer;
+
+            var toArray = function(collection) {
+                var out = new Array();
+
+                for (i = 0; i < collection.size(); i++) {
+                    out.push(collection.get(i));
+                }
+                return out;
+            };
+
+            var removeShapePoints = function() {
+                if (shapePointsLayer) {
+                    map.removeLayer(shapePointsLayer);
+                    shapePointsLayer = undefined;
+                }
+            };
+
+            var addShapePointsToMap = function(shapePoints) {
+                removeShapePoints();
+                var latLngs = new Array();
+
+                toArray(shapePoints).forEach(function(value) {
+                    latLngs.push(L.latLng(value.getLat(), value.getLon()));
+                });
+
+                shapePointsLayer = L.polyline(latLngs, {});
+                shapePointsLayer.addTo(map);
+                map.fitBounds(shapePointsLayer.getBounds());
+            };
+
+
+            var removeStopTimes = function() {
+                if (stopsLayerGroup) {
+                    map.removeLayer(stopsLayerGroup);
+                    stopsLayerGroup = undefined;
+                }
+            };
+
+
+            /**
+             * Because we might stop multiple times at the same stop, we first
+             * have to reorganize the stoptimes by stop.
+             * 
+             * 
+             * @param {type} stopTimes
+             * @returns {undefined}
+             */
+            var addStopTimesToMap = function(stopTimes) {
+                removeStopTimes();
+
+                stops = {};
+                stopsLayerGroup = L.layerGroup();
+
+                toArray(stopTimes).forEach(function(value) {
+                    var stopId = value.getStop().getId().toString();
+                    var stop = value.getStop();
+
+
+                    if (!(stopId in stops)) {
+                        stops[stopId] = {stop: stop, stopTimes: []};
+                    }
+
+                    stops[stopId].stopTimes.push(value);
+                });
+
+                Object.keys(stops).forEach(function(stopId) {
+                    var stopData = stops[stopId];
+
+                    stopData.marker = L.marker(L.latLng(stopData.stop.getLat(), stopData.stop.getLon()));
+
+                    stopData.marker.addTo(stopsLayerGroup);
+                });
+
+                stopsLayerGroup.addTo(map);
+            };
+
+            var highlightStopTime = function(stopTime) {
+                var stopId = stopTime.getStop().getId().toString();
+
+                var marker = stops[stopId].marker;
+
+                map.once('moveend', function() {
+                    marker.bounce({duration: 1500, height: 100});
+                });
+
+                map.panTo(marker.getLatLng());
+            };
+
+            var highlightShapePoint = function(shapePoint) {
+                var marker = L.marker(L.latLng(shapePoint.getLat(), shapePoint.getLon()));
+
+                map.addLayer(marker);
+
+                map.once('moveend', function() {
+                    marker.bounce({duration: 1500, height: 100}, function() {
+                        map.removeLayer(marker);
+                    });
+                });
+
+                map.panTo(marker.getLatLng());
+            };
+        </script>
+    </body>
+</html>

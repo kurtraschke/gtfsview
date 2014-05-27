@@ -1,0 +1,9 @@
+* GTFS loading
+    * move to SwingWorker
+    * error handling
+* StopTimes table
+    * Rendering of times
+
+* Auditing of shapes and stoptimes
+
+* Bug: select agency, route, trip, then shape - trip becomes deselected - why?
